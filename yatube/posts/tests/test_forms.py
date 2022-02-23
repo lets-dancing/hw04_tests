@@ -3,7 +3,6 @@ from django.test import Client, TestCase
 from django.urls import reverse
 
 from posts.models import Group, Post
-from posts.forms import PostForm
 
 User = get_user_model()
 
@@ -25,16 +24,6 @@ class PostFormTests(TestCase):
             slug='test-slug-new',
             description='test_description'
         )
-        cls.post = Post.objects.create(
-            text='test_post',
-            group=cls.group_old,
-            author=cls.author
-        )
-        cls.form = PostForm()
-
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
 
     def test_create_post(self):
         """Проверка формы создания нового поста."""
@@ -49,19 +38,35 @@ class PostFormTests(TestCase):
             data=form_data,
             follow=True
         )
+        post = Post.objects.get(id=1)
         self.assertRedirects(response, reverse('posts:profile',
                              args=[PostFormTests.author.username]))
         self.assertEqual(Post.objects.count(), posts_count + 1)
-        self.assertTrue(
-            Post.objects.filter(
-                group=PostFormTests.group_old.id,
-                text='test_new_post'
-            ).exists()
+        self.assertEqual(post.author, self.author)
+        self.assertEqual(post.group, self.group_old)
+        self.assertEqual(post.text, 'test_new_post')
+
+    def test_create_post_not_auth_user(self):
+        """
+        Проверка формы создания нового
+        поста неавторизированным пользователем.
+        """
+        self.guest_client = Client()
+        posts_count = Post.objects.count()
+        response = self.guest_client.post(
+            reverse('posts:post_create')
         )
+        self.assertRedirects(response, '/auth/login/?next=%2Fcreate%2F')
+        self.assertEqual(Post.objects.count(), posts_count)
 
     def test_edit_post(self):
         """Проверка формы редактирования поста и изменение
         его в базе данных."""
+        post = Post.objects.create(
+            text='test_post',
+            group=PostFormTests.group_old,
+            author=PostFormTests.author
+        )
         group_field_new = PostFormTests.group_new.id
         form_data = {
             'text': 'test_edit_post',
@@ -70,7 +75,7 @@ class PostFormTests(TestCase):
         response = PostFormTests.author_client.post(
             reverse(
                 'posts:post_edit',
-                kwargs={'post_id': PostFormTests.post.pk}
+                kwargs={'post_id': post.pk}
             ),
             data=form_data,
             follow=True
@@ -78,7 +83,7 @@ class PostFormTests(TestCase):
         self.assertRedirects(
             response,
             reverse('posts:post_detail',
-                    kwargs={'post_id': PostFormTests.post.pk}
+                    kwargs={'post_id': post.pk}
                     )
         )
         self.assertTrue(
@@ -90,6 +95,6 @@ class PostFormTests(TestCase):
         self.assertFalse(
             Post.objects.filter(
                 group=PostFormTests.group_old.id,
-                text='test_post'
+                text=post.text
             ).exists()
         )

@@ -54,18 +54,20 @@ class PostPagesTest(TestCase):
             'text': forms.fields.CharField,
             'group': forms.fields.ChoiceField
         }
-        for i in range(13):
-            cls.post = Post.objects.create(
-                group=cls.group,
-                text="Какой-то там текст",
-                author=cls.author
-            )
+        posts = [Post(
+            group=cls.group,
+            text='test_post',
+            author=cls.author)
+            for i in range(13)
+        ]
+        Post.objects.bulk_create(posts)
 
     def test_pages_uses_correct_template(self):
         """URL-адрес использует соответствующий шаблон."""
-
-        for reverse_name, template\
-                in PostPagesTest.templates_pages_names.items():
+        for (
+            reverse_name,
+            template
+        ) in PostPagesTest.templates_pages_names.items():
             with self.subTest(template=template):
                 response = PostPagesTest.authorized_author_client.get(
                     reverse_name
@@ -97,8 +99,8 @@ class PostPagesTest(TestCase):
     def test_group_list_show_group_posts(self):
         """
         На страницу group_list передаётся список постов,
-         отфильтрованных по группе.
-         """
+        отфильтрованных по группе.
+        """
         response = PostPagesTest.authorized_author_client.get(
             reverse('posts:group_list', args=[PostPagesTest.group.slug])
         )
@@ -165,10 +167,10 @@ class PostPagesTest(TestCase):
         """Колличество постов на первой странице равно 10"""
 
         response = self.client.get(reverse('posts:index'))
-        self.assertEqual(len(response.context.get('page_obj').object_list), 10)
+        self.assertEqual(len(response.context.get('page_obj').obj), 10)
 
     def test_second_page_containse_three_records(self):
-        response = self.guest_client.get(reverse('posts:index') + '?page=2')
+        response = self.guest_client.get(reverse('posts:index') + {'page': 2})
         self.assertEqual(len(response.context.get('page_obj').object_list), 5)
 
     def test_first_page_containse_ten_records(self):
