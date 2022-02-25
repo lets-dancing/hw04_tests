@@ -62,35 +62,11 @@ class PostURLTests(TestCase):
             response = PostURLTests.guest_client.get(url)
             self.assertEqual(response.status_code, HTTPStatus.OK)
 
-    def test_non_public_urls_not_available_for_auth_not(self):
-        """
-        Не публичный URL-адрес направляет
-        неавторизированного пользователя на страницу авторизации.
-        """
-        for url, _ in PostURLTests.non_public_urls:
-            response = PostURLTests.guest_client.get(url)
-            self.assertEqual(response.status_code, HTTPStatus.FOUND)
-
     def test_non_public_urls_available_for_auth(self):
         """Не публичный URL-адрес доступен авторизированному пользователю."""
         for url, _ in PostURLTests.non_public_urls:
             response = PostURLTests.authorized_client_author.get(url)
             self.assertEqual(response.status_code, HTTPStatus.OK)
-
-    def test_profile_post_edit_not_auth(self):
-        """
-        Прямая ссылка /posts/<post_id>/edit/ перенаправит анонимного
-        пользователя на страницу логина.
-        """
-        response = PostURLTests.guest_client.get(
-            (f'/posts/{PostURLTests.post.pk}/edit/'),
-            follow=True
-        )
-        self.assertRedirects(
-            response,
-            (f'/auth/login/?next='
-             f'/posts/{PostURLTests.post.pk}/edit/')
-        )
 
     def test_profile_post_edit_auth_not_author(self):
         """
@@ -128,4 +104,7 @@ class PostURLTests(TestCase):
         """
         for url, _ in PostURLTests.non_public_urls:
             response = PostURLTests.guest_client.get(url)
-            self.assertEqual(response.status_code, HTTPStatus.FOUND)
+            self.assertRedirects(
+            response,
+            '/auth/login/?next=' + url
+        )

@@ -170,26 +170,18 @@ class PostPagesTest(TestCase):
         response_post = response.context.get('post')
         self.assertEqual(post, response_post)
 
-    def test_first_page_containse_ten_records(self):
-        """Колличество постов на первой странице равно 10"""
-        for (
+    def test_paginator(self):
+        pages = (
+            (1, FIRST_PAGE_RECORDS),
+            (2, SECOND_PAGE_RECORDS),
+        )
+        for page, count in pages:
+            for (
             reverse_name,
             template
         ) in PostPagesTest.templates_for_paginator.items():
-            with self.subTest(template=template):
-                response = PostPagesTest.guest_client.get(
-                    reverse_name
-                )
-        self.assertEqual(len(response.context.get('page_obj').object_list),
-                         FIRST_PAGE_RECORDS)
-
-    def test_second_page_containse_three_records(self):
-        for (
-            reverse_name,
-            template
-        ) in PostPagesTest.templates_for_paginator.items():
-            with self.subTest(template=template):
-                response = PostPagesTest.guest_client.get(
-                    reverse_name, {'page': 2})
-        self.assertEqual(len(response.context.get('page_obj').object_list),
-                         SECOND_PAGE_RECORDS)
+                with self.subTest(template=template):
+                    response = PostPagesTest.guest_client.get(
+                        reverse_name, {'page': page}
+                    )
+        self.assertEqual(len(response.context['page_obj'].object_list), count)
