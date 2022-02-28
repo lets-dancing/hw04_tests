@@ -105,6 +105,6 @@ class PostURLTests(TestCase):
         for url, _ in PostURLTests.non_public_urls:
             response = PostURLTests.guest_client.get(url)
             self.assertRedirects(
-            response,
-            '/auth/login/?next=' + url
-        )
+                response,
+                '/auth/login/?next=' + url
+            )

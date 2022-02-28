@@ -1,3 +1,4 @@
+from turtle import title
 from django import forms
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
@@ -34,7 +35,8 @@ class PostPagesTest(TestCase):
         cls.post = Post.objects.create(
             text='test_post',
             group=cls.group,
-            author=cls.author
+            author=cls.author,
+            image='test_picture'
         )
         cls.templates_pages_names = {
             reverse('posts:index'): 'posts/index.html',
@@ -81,7 +83,8 @@ class PostPagesTest(TestCase):
         }
         cls.form_fields = {
             'text': forms.fields.CharField,
-            'group': forms.fields.ChoiceField
+            'group': forms.fields.ChoiceField,
+            'image': forms.fields.ImageField,
         }
         posts = [Post(
             group=cls.group,
@@ -177,11 +180,24 @@ class PostPagesTest(TestCase):
         )
         for page, count in pages:
             for (
-            reverse_name,
-            template
-        ) in PostPagesTest.templates_for_paginator.items():
+                reverse_name,
+                template
+            ) in PostPagesTest.templates_for_paginator.items():
                 with self.subTest(template=template):
                     response = PostPagesTest.guest_client.get(
                         reverse_name, {'page': page}
                     )
         self.assertEqual(len(response.context['page_obj'].object_list), count)
+
+    def test_pages_show_image(self):
+        for (
+            reverse_name,
+            template
+        ) in PostPagesTest.templates_for_pages_show.items():
+            with self.subTest(template=template):
+                response = PostPagesTest.guest_client.get(
+                    reverse_name
+                )
+        post = PostPagesTest.post
+        response_post = response.context.get('image')
+        self.assertEqual(post.image, response_post)
