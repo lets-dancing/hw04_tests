@@ -1,8 +1,14 @@
+import shutil
+import tempfile
+
 from django.contrib.auth import get_user_model
+from django.conf import settings
 from django.test import Client, TestCase
 from django.urls import reverse
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 from posts.models import Group, Post
+from posts.forms import PostForm
 
 User = get_user_model()
 
@@ -11,9 +17,46 @@ class PostFormTests(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        settings.MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
         cls.author = User.objects.create_user(username='testauthor')
         cls.author_client = Client()
         cls.author_client.force_login(cls.author)
+        cls.small_gif_old1 = (
+            b'\x47\x49\x46\x38\x39\x61\x01\x00'
+            b'\x01\x00\x00\x00\x00\x21\xf9\x04'
+            b'\x01\x0a\x00\x01\x00\x2c\x00\x00'
+            b'\x00\x00\x01\x00\x01\x00\x00\x02'
+            b'\x02\x4c\x01\x00\x3b'
+        )
+        cls.small_gif_old2 = (
+            b'\x47\x49\x46\x38\x39\x61\x01\x00'
+            b'\x01\x00\x00\x00\x00\x21\xf9\x04'
+            b'\x01\x0a\x00\x01\x00\x2c\x00\x00'
+            b'\x00\x00\x01\x00\x01\x00\x00\x02'
+            b'\x02\x4c\x01\x00\x3b'
+        )
+        cls.small_gif_new = (
+            b'\x47\x49\x46\x38\x39\x61\x01\x00'
+            b'\x01\x00\x00\x00\x00\x21\xf9\x04'
+            b'\x01\x0a\x00\x01\x00\x2c\x00\x00'
+            b'\x00\x00\x01\x00\x01\x00\x00\x02'
+            b'\x02\x4c\x01\x00\x3b'
+        )
+        cls.uploaded_old1 = SimpleUploadedFile(
+            name='small_old1.gif',
+            content=cls.small_gif_old1,
+            content_type='image/gif'
+        )
+        cls.uploaded_old2 = SimpleUploadedFile(
+            name='small_old2.gif',
+            content=cls.small_gif_old2,
+            content_type='image/gif'
+        )
+        cls.uploaded_new = SimpleUploadedFile(
+            name='small_new.gif',
+            content=cls.small_gif_new,
+            content_type='image/gif'
+        )
         cls.group_old = Group.objects.create(
             title='test_group_old',
             slug='test-slug-old',
@@ -25,13 +68,19 @@ class PostFormTests(TestCase):
             description='test_description'
         )
 
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        shutil.rmtree(settings.MEDIA_ROOT, ignore_errors=True)
+
     def test_create_post(self):
         """Проверка формы создания нового поста."""
         posts_count = Post.objects.count()
         group_field = PostFormTests.group_old.id
         form_data = {
             'text': 'test_new_post',
-            'group': group_field
+            'group': group_field,
+            'image': PostFormTests.uploaded_old2
         }
         response = PostFormTests.author_client.post(
             reverse('posts:post_create'),
@@ -45,6 +94,7 @@ class PostFormTests(TestCase):
         self.assertEqual(post.author, self.author)
         self.assertEqual(post.group, self.group_old)
         self.assertEqual(post.text, 'test_new_post')
+        self.assertEqual(post.image, self.uploaded_old2)
 
     def test_create_post_not_auth_user(self):
         """

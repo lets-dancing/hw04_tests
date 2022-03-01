@@ -1,6 +1,6 @@
-from turtle import title
 from django import forms
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase
 from django.urls import reverse
 
@@ -27,6 +27,18 @@ class PostPagesTest(TestCase):
         )
         cls.authorized_not_author_client = Client()
         cls.authorized_not_author_client.force_login(cls.not_author)
+        cls.small_gif = (
+            b'\x47\x49\x46\x38\x39\x61\x01\x00'
+            b'\x01\x00\x00\x00\x00\x21\xf9\x04'
+            b'\x01\x0a\x00\x01\x00\x2c\x00\x00'
+            b'\x00\x00\x01\x00\x01\x00\x00\x02'
+            b'\x02\x4c\x01\x00\x3b'
+        )
+        cls.uploaded = SimpleUploadedFile(
+            name='small.gif',
+            content=cls.small_gif,
+            content_type='image/gif'
+        )
         cls.group = Group.objects.create(
             title='test_group',
             slug='test_slug',
@@ -36,7 +48,7 @@ class PostPagesTest(TestCase):
             text='test_post',
             group=cls.group,
             author=cls.author,
-            image='test_picture'
+            image=cls.uploaded
         )
         cls.templates_pages_names = {
             reverse('posts:index'): 'posts/index.html',
@@ -135,9 +147,11 @@ class PostPagesTest(TestCase):
         post_author = response_post.author
         post_group = response_post.group
         post_text = response_post.text
+        post_image = response_post.image
         self.assertEqual(post_author, PostPagesTest.author)
         self.assertEqual(post_group, PostPagesTest.group)
         self.assertEqual(post_text, post.text)
+        self.assertEqual(post_image, post.image)
 
     def test_group_list_show_group_posts(self):
         """
@@ -188,16 +202,3 @@ class PostPagesTest(TestCase):
                         reverse_name, {'page': page}
                     )
         self.assertEqual(len(response.context['page_obj'].object_list), count)
-
-    def test_pages_show_image(self):
-        for (
-            reverse_name,
-            template
-        ) in PostPagesTest.templates_for_pages_show.items():
-            with self.subTest(template=template):
-                response = PostPagesTest.guest_client.get(
-                    reverse_name
-                )
-        post = PostPagesTest.post
-        response_post = response.context.get('image')
-        self.assertEqual(post.image, response_post)
