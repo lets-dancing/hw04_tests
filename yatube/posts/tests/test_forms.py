@@ -8,7 +8,6 @@ from django.urls import reverse
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 from posts.models import Group, Post
-from posts.forms import PostForm
 
 User = get_user_model()
 
@@ -88,13 +87,15 @@ class PostFormTests(TestCase):
             follow=True
         )
         post = Post.objects.get(id=1)
+        post_image = PostFormTests.uploaded_old1
         self.assertRedirects(response, reverse('posts:profile',
                              args=[PostFormTests.author.username]))
         self.assertEqual(Post.objects.count(), posts_count + 1)
         self.assertEqual(post.author, self.author)
         self.assertEqual(post.group, self.group_old)
         self.assertEqual(post.text, 'test_new_post')
-        self.assertEqual(post.image, self.uploaded_old2)
+        self.assertEqual(post_image.content_type,
+                         self.uploaded_old2.content_type)
 
     def test_create_post_not_auth_user(self):
         """
@@ -120,7 +121,8 @@ class PostFormTests(TestCase):
         group_field_new = PostFormTests.group_new.id
         form_data = {
             'text': 'test_edit_post',
-            'group': group_field_new
+            'group': group_field_new,
+            'image': PostFormTests.uploaded_new
         }
         response = PostFormTests.author_client.post(
             reverse(
@@ -139,12 +141,14 @@ class PostFormTests(TestCase):
         self.assertTrue(
             Post.objects.filter(
                 group=PostFormTests.group_new.id,
-                text='test_edit_post'
+                text='test_edit_post',
+                image='posts/small_new.gif'
             ).exists()
         )
         self.assertFalse(
             Post.objects.filter(
                 group=PostFormTests.group_old.id,
-                text=post.text
+                text=post.text,
+                image='posts/small_old1.gif'
             ).exists()
         )
