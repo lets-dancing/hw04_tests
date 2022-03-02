@@ -94,8 +94,10 @@ class PostFormTests(TestCase):
         self.assertEqual(post.author, self.author)
         self.assertEqual(post.group, self.group_old)
         self.assertEqual(post.text, 'test_new_post')
-        self.assertEqual(post_image.content_type,
-                         self.uploaded_old2.content_type)
+        self.assertEqual(
+            post_image.content_type,
+            self.uploaded_old2.content_type
+            )
 
     def test_create_post_not_auth_user(self):
         """
@@ -121,8 +123,7 @@ class PostFormTests(TestCase):
         group_field_new = PostFormTests.group_new.id
         form_data = {
             'text': 'test_edit_post',
-            'group': group_field_new,
-            'image': PostFormTests.uploaded_new
+            'group': group_field_new
         }
         response = PostFormTests.author_client.post(
             reverse(
@@ -141,14 +142,12 @@ class PostFormTests(TestCase):
         self.assertTrue(
             Post.objects.filter(
                 group=PostFormTests.group_new.id,
-                text='test_edit_post',
-                image='posts/small_new.gif'
+                text='test_edit_post'
             ).exists()
         )
         self.assertFalse(
             Post.objects.filter(
                 group=PostFormTests.group_old.id,
-                text=post.text,
-                image='posts/small_old1.gif'
+                text=post.text
             ).exists()
         )

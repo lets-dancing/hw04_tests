@@ -4,7 +4,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase
 from django.urls import reverse
 
-from posts.models import Group, Post
+from posts.models import Comment, Group, Post
 
 User = get_user_model()
 
@@ -49,6 +49,12 @@ class PostPagesTest(TestCase):
             group=cls.group,
             author=cls.author,
             image=cls.uploaded
+        )
+        cls.comment = Comment.objects.create(
+            post=cls.post,
+            author=cls.author,
+            text='test_comment'
+
         )
         cls.templates_pages_names = {
             reverse('posts:index'): 'posts/index.html',
@@ -134,6 +140,9 @@ class PostPagesTest(TestCase):
                 self.assertIsInstance(form_field, expected)
 
     def test_pages_show_correct_link(self):
+        """
+        Страницы отражают корректные ссылки
+        """
         for (
             reverse_name,
             template
@@ -202,3 +211,32 @@ class PostPagesTest(TestCase):
                         reverse_name, {'page': page}
                     )
         self.assertEqual(len(response.context['page_obj'].object_list), count)
+
+    def test_auth_comments(self):
+        """ Только авторизованный пользователь может комментировать посты."""
+
+        comment = Comment.objects.create(author=self.author, post_id=self.post.pk)
+        response = PostPagesTest.comment
+        self.assertEqual(response, comment)
+
+        # self.client.logout()
+        # response = self.response_post(
+        #     name='add_comment',
+        #     rev_args={
+        #         'username': self.user.username,
+        #         'post_id': post.id
+        #     },
+        #     post_args={'text': comment}
+        # )
+        # reverse_string = reverse(
+        #     'add_comment',
+        #     kwargs={
+        #         'post_id': post.id,
+        #         'username': self.user.username
+        #     }
+        # )
+        # redirect_string = f"{settings.LOGIN_URL}?next={reverse_string}"
+        # self.assertRedirects(
+        #     response,
+        #     redirect_string
+        # )
