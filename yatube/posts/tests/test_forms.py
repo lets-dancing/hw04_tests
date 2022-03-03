@@ -97,7 +97,7 @@ class PostFormTests(TestCase):
         self.assertEqual(
             post_image.content_type,
             self.uploaded_old2.content_type
-            )
+        )
 
     def test_create_post_not_auth_user(self):
         """
@@ -168,5 +168,5 @@ class PostFormTests(TestCase):
             text='test_comment'
         )
         self.assertRedirects(response, reverse('posts:post_detail',
-                    kwargs={'post_id': post.pk}))
+                             kwargs={'post_id': post.pk}))
         self.assertEqual(Comment.objects.count(), comments_count + 1)

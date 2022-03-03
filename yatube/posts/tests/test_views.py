@@ -1,11 +1,15 @@
+import shutil
+import tempfile
+
 from django import forms
 from django.contrib.auth import get_user_model
+from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.cache import cache
 from django.test import Client, TestCase
 from django.urls import reverse
 
-from posts.models import Comment, Group, Post
+from posts.models import Group, Post
 
 User = get_user_model()
 
@@ -17,6 +21,7 @@ class PostPagesTest(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        settings.MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
         cls.guest_client = Client()
         cls.author = User.objects.create_user(
             username='Bobby'
@@ -106,6 +111,11 @@ class PostPagesTest(TestCase):
             for i in range(13)
         ]
         Post.objects.bulk_create(posts)
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        shutil.rmtree(settings.MEDIA_ROOT, ignore_errors=True)
 
     def test_pages_uses_correct_template(self):
         """URL-адрес использует соответствующий шаблон."""
@@ -209,16 +219,25 @@ class PostPagesTest(TestCase):
 
     def test_cache_index(self):
         """Проверка хранения и очищения кэша для index."""
-        response = PostPagesTest.authorized_author_client.get(reverse('posts:index'))
+        response = PostPagesTest.authorized_author_client.get(
+            reverse('posts:index')
+        )
         posts = response.content
         Post.objects.create(
             text='test_new_post',
             author=PostPagesTest.author,
         )
-        response_old = PostPagesTest.authorized_author_client.get(reverse('posts:index'))
+        response_old = PostPagesTest.authorized_author_client.get(
+            reverse('posts:index')
+        )
         old_posts = response_old.content
-        self.assertEqual(old_posts, posts, 'Не возвращает кэшированную страницу.')
+        self.assertEqual(
+            old_posts, posts,
+            'Не возвращает кэшированную страницу.'
+        )
         cache.clear()
-        response_new = PostPagesTest.authorized_author_client.get(reverse('posts:index'))
+        response_new = PostPagesTest.authorized_author_client.get(
+            reverse('posts:index')
+        )
         new_posts = response_new.content
         self.assertNotEqual(old_posts, new_posts, 'Нет сброса кэша.')
