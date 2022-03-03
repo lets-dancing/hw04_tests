@@ -7,7 +7,7 @@ from django.test import Client, TestCase
 from django.urls import reverse
 from django.core.files.uploadedfile import SimpleUploadedFile
 
-from posts.models import Group, Post
+from posts.models import Comment, Group, Post
 
 User = get_user_model()
 
@@ -113,8 +113,10 @@ class PostFormTests(TestCase):
         self.assertEqual(Post.objects.count(), posts_count)
 
     def test_edit_post(self):
-        """Проверка формы редактирования поста и изменение
-        его в базе данных."""
+        """
+        Проверка формы редактирования поста и изменение
+        его в базе данных.
+        """
         post = Post.objects.create(
             text='test_post',
             group=PostFormTests.group_old,
@@ -151,3 +153,20 @@ class PostFormTests(TestCase):
                 text=post.text
             ).exists()
         )
+
+    def test_post_comment(self):
+        """Проверка создания нового комментария."""
+        comments_count = Comment.objects.count()
+        post = Post.objects.create(
+            author=PostFormTests.author
+        )
+        self.url = reverse('posts:add_comment', kwargs={'post_id': post.pk})
+        response = PostFormTests.author_client.post(self.url)
+        Comment.objects.create(
+            post=post,
+            author=PostFormTests.author,
+            text='test_comment'
+        )
+        self.assertRedirects(response, reverse('posts:post_detail',
+                    kwargs={'post_id': post.pk}))
+        self.assertEqual(Comment.objects.count(), comments_count + 1)

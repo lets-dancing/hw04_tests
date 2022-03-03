@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.cache import cache
 from django.test import Client, TestCase
 from django.urls import reverse
 
@@ -49,12 +50,6 @@ class PostPagesTest(TestCase):
             group=cls.group,
             author=cls.author,
             image=cls.uploaded
-        )
-        cls.comment = Comment.objects.create(
-            post=cls.post,
-            author=cls.author,
-            text='test_comment'
-
         )
         cls.templates_pages_names = {
             reverse('posts:index'): 'posts/index.html',
@@ -212,31 +207,18 @@ class PostPagesTest(TestCase):
                     )
         self.assertEqual(len(response.context['page_obj'].object_list), count)
 
-    def test_auth_comments(self):
-        """ Только авторизованный пользователь может комментировать посты."""
-
-        comment = Comment.objects.create(author=self.author, post_id=self.post.pk)
-        response = PostPagesTest.comment
-        self.assertEqual(response, comment)
-
-        # self.client.logout()
-        # response = self.response_post(
-        #     name='add_comment',
-        #     rev_args={
-        #         'username': self.user.username,
-        #         'post_id': post.id
-        #     },
-        #     post_args={'text': comment}
-        # )
-        # reverse_string = reverse(
-        #     'add_comment',
-        #     kwargs={
-        #         'post_id': post.id,
-        #         'username': self.user.username
-        #     }
-        # )
-        # redirect_string = f"{settings.LOGIN_URL}?next={reverse_string}"
-        # self.assertRedirects(
-        #     response,
-        #     redirect_string
-        # )
+    def test_cache_index(self):
+        """Проверка хранения и очищения кэша для index."""
+        response = PostPagesTest.authorized_author_client.get(reverse('posts:index'))
+        posts = response.content
+        Post.objects.create(
+            text='test_new_post',
+            author=PostPagesTest.author,
+        )
+        response_old = PostPagesTest.authorized_author_client.get(reverse('posts:index'))
+        old_posts = response_old.content
+        self.assertEqual(old_posts, posts, 'Не возвращает кэшированную страницу.')
+        cache.clear()
+        response_new = PostPagesTest.authorized_author_client.get(reverse('posts:index'))
+        new_posts = response_new.content
+        self.assertNotEqual(old_posts, new_posts, 'Нет сброса кэша.')
